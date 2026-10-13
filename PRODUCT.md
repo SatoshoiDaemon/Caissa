@@ -31,7 +31,7 @@ The product is evaluated and used in a browser, primarily as a local or self-hos
 - Persistent MongoDB state and Redis coordination for locks, presence, rate limiting, and pub/sub.
 - Accounts use username and password without email; recovery uses one-time backup codes.
 - Public rooms, code-only rooms, authenticated players, anonymous read-only spectators, and reconnection are supported.
-- The frontend currently uses Portuguese (`pt-BR`) user-facing copy.
+- The frontend supports Brazilian Portuguese (`pt-BR`) and American English (`en-US`) user-facing copy, defaults to Portuguese, and remembers the selected language in the browser.
 - Keyboard support and responsive mobile layout are required product constraints.
 - The product is intended to remain casual and fun while retaining a credible path toward scaling into a real system.
 - It is not required to provide chess.com-scale competition, rankings, matchmaking, AI, or a production-scale deployment.

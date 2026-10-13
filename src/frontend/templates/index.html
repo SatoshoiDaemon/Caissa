@@ -5,16 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#111416">
     <title>Caissa — Arena de xadrez</title>
-    <link rel="stylesheet" href="/css/style.css?v=6">
+    <link rel="stylesheet" href="/css/style.css?v=8">
 </head>
 <body>
     <div class="app-shell">
         <header class="topbar">
-            <a class="brand" href="/home" data-route="/home" aria-label="Caissa, voltar ao lobby">
+            <a class="brand" href="/home" data-route="/home" aria-label="Caissa, ir para a página inicial">
                 <span class="brand-mark"><img class="brand-logo" src="/assets/caissa-logo.png" alt="" aria-hidden="true"></span>
                 <span><strong>CAISSA</strong><small>REAL-TIME CHESS</small></span>
             </a>
             <div class="topbar-meta">
+                <nav class="primary-nav" aria-label="Navegação principal"><a href="/home" data-route="/home">Início</a><a href="/lobby" data-route="/lobby">Lobby</a></nav>
+                <label class="language-control" for="language-select"><span class="sr-only">Idioma</span><select id="language-select" aria-label="Idioma"><option value="pt-BR">PT-BR</option><option value="en-US">EN-US</option></select></label>
                 <span class="system-chip"><i></i> Servidor local</span>
                 <div id="account-bar" class="account-bar">
                     <span id="account-label">Convidado</span>
@@ -25,6 +27,15 @@
                 </div>
             </div>
         </header>
+
+        <main id="landing-page" class="page-view landing-view hidden" aria-labelledby="landing-title">
+            <section class="landing-hero">
+                <div class="landing-copy"><p class="section-kicker">XADREZ CASUAL · AO VIVO</p><h1 id="landing-title">Um tabuleiro.<br><em>Seu próximo jogo.</em></h1><p>Jogue xadrez no navegador, crie salas para seus amigos ou acompanhe uma partida ao vivo. O estado da partida e o relógio são controlados pelo servidor.</p><div class="landing-actions"><a class="button button-amber" href="/lobby" data-route="/lobby">Encontrar uma partida <span aria-hidden="true">↗</span></a><a class="button button-ghost" href="/login" data-route="/login">Criar conta</a></div></div>
+                <div class="landing-board-art" aria-hidden="true"><img src="/assets/caissa-logo.png" alt=""></div>
+            </section>
+            <section class="landing-details" aria-labelledby="landing-details-title"><div><p class="section-kicker">COMO FUNCIONA</p><h2 id="landing-details-title">Uma arena simples<br>para jogar junto.</h2></div><div class="landing-detail-list"><article><span>01</span><div><h3>Escolha como jogar</h3><p>Comece uma partida local no mesmo dispositivo ou encontre uma sala online.</p></div></article><article><span>02</span><div><h3>Convide ou assista</h3><p>Entre por um código, compartilhe uma sala ou acompanhe uma partida pública em modo espectador.</p></div></article><article><span>03</span><div><h3>Retome o fio do jogo</h3><p>Contas guardam perfil, estatísticas e histórico. Partidas concluídas podem ser revistas lance a lance.</p></div></article></div></section>
+            <section class="landing-cta"><p>O próximo lance começa no lobby.</p><a class="button button-amber" href="/lobby" data-route="/lobby">Ir para o lobby <span aria-hidden="true">↗</span></a></section>
+        </main>
 
         <main id="login-page" class="page-view hidden" aria-labelledby="login-page-title">
             <div class="auth-shell">
@@ -52,7 +63,7 @@
             <section id="profile-security-panel" class="profile-security-panel hidden"><p class="section-kicker">CONTA</p><h2>Segurança e recuperação</h2><p class="profile-security-copy">Altere sua senha ou gere um novo conjunto de códigos de recuperação.</p><form id="profile-password-form" class="security-form hidden"><label for="profile-current-password">Senha atual</label><input id="profile-current-password" class="input-field" type="password" autocomplete="current-password" required><label for="profile-new-password">Nova senha</label><input id="profile-new-password" class="input-field" type="password" minlength="12" autocomplete="new-password" required><button id="btn-profile-password-submit" class="button button-amber" type="submit">Alterar senha</button></form><form id="profile-rotate-form" class="security-form hidden"><label for="profile-rotate-password">Senha atual <small>ou código de recuperação</small></label><input id="profile-rotate-password" class="input-field" type="password" autocomplete="current-password"><input id="profile-rotate-code" class="input-field" autocomplete="one-time-code" placeholder="Código de recuperação"><button id="btn-profile-rotate-submit" class="button button-amber" type="submit">Gerar novos códigos</button></form><div class="profile-security-actions"><button id="btn-profile-change-password" class="button button-ghost" type="button">Alterar senha</button><button id="btn-profile-rotate-codes" class="button button-amber" type="button">Gerar novos códigos</button></div></section>
         </main>
 
-        <main id="menu-principal" class="lobby-view">
+        <main id="menu-principal" class="lobby-view hidden" aria-labelledby="lobby-title">
             <section class="lobby-intro" aria-labelledby="lobby-title">
                 <div><p class="section-kicker">LOBBY / 01</p><h1 id="lobby-title">Escolha uma partida.<br><em>Entre no ritmo.</em></h1><p class="intro-copy">Uma arena casual para jogar, assistir e voltar ao jogo sem perder o estado.</p></div>
                 <div class="pulse-panel" aria-label="Estado da arena"><span class="pulse-ring"><i></i></span><div><strong>Partidas ao vivo</strong><small>Jogue ou assista agora</small></div></div>
@@ -67,6 +78,13 @@
                 <div id="room-filters" class="room-filters" role="group" aria-label="Filtrar salas"><button class="filter-button is-active" data-room-filter="all" type="button">Todas</button><button class="filter-button" data-room-filter="waiting" type="button">Aguardando</button><button class="filter-button" data-room-filter="active" type="button">Em jogo</button><select id="room-mode-filter" class="filter-select" aria-label="Filtrar por modo"><option value="all">Todos os modos</option><option value="bullet">Bullet</option><option value="blitz">Blitz</option><option value="rapid">Rapid</option><option value="classical">Classical</option></select></div>
                 <div id="rooms-list" class="rooms-list" aria-live="polite"><p class="empty-state">Procurando partidas abertas...</p></div>
             </section>
+        </main>
+
+        <main id="game-replay-page" class="page-view replay-page hidden" aria-labelledby="replay-title">
+            <div class="replay-topline"><a class="back-button" href="/lobby" data-route="/lobby"><span aria-hidden="true">←</span> Lobby</a><span class="page-route-label" data-i18n="replay.eyebrow">REVISÃO DA PARTIDA</span></div>
+            <section class="replay-heading"><div><p class="section-kicker" data-i18n="replay.eyebrow">REVISÃO DA PARTIDA</p><h1 id="replay-title" data-i18n="replay.title">Revise cada lance.</h1><p id="replay-message" class="replay-message" role="status" aria-live="polite"></p></div><div id="replay-result" class="replay-result"></div></section>
+            <div id="replay-content" class="replay-layout hidden"><section class="replay-board-column"><div class="replay-player replay-player-top"><span id="replay-black-name">Pretas</span><span id="replay-black-result"></span></div><div id="replay-board" class="chessboard replay-board" role="grid" aria-label="Tabuleiro da revisão"></div><div class="replay-player replay-player-bottom"><span id="replay-white-name">Brancas</span><span id="replay-white-result"></span></div><div class="replay-controls"><button id="replay-first" class="button button-ghost" type="button" aria-label="Primeiro lance">|←</button><button id="replay-previous" class="button button-ghost" type="button" aria-label="Lance anterior">←</button><span id="replay-position" class="replay-position" aria-live="polite">0 / 0</span><button id="replay-next" class="button button-ghost" type="button" aria-label="Próximo lance">→</button><button id="replay-last" class="button button-ghost" type="button" aria-label="Último lance">→|</button></div></section><aside class="replay-moves"><div class="module-heading"><h2 data-i18n="replay.moves">Lances</h2><span id="replay-move-count">0</span></div><ol id="replay-move-list" class="replay-move-list" aria-label="Lista de lances"></ol></aside></div>
+            <div id="replay-unavailable" class="replay-unavailable hidden"><p id="replay-unavailable-copy"></p><a class="button button-ghost" href="/lobby" data-route="/lobby" data-i18n="nav.openLobby">Abrir lobby</a></div>
         </main>
 
         <main id="game-container" class="game-view hidden">
@@ -105,6 +123,6 @@
     <div id="promotion-dialog" class="dialog hidden" role="dialog" aria-modal="true" aria-labelledby="promotion-title"><div class="dialog-content promotion-dialog-content"><p class="section-kicker">MOVIMENTO ESPECIAL</p><h2 id="promotion-title">Escolha sua promoção.</h2><p class="dialog-lede">A decisão é sua. O servidor valida o movimento.</p><div class="promotion-options" role="group" aria-label="Peça para promoção"><button class="button button-ghost promotion-option" data-promotion="q" aria-label="Promover para dama">♛<span>Dama</span></button><button class="button button-ghost promotion-option" data-promotion="r" aria-label="Promover para torre">♜<span>Torre</span></button><button class="button button-ghost promotion-option" data-promotion="b" aria-label="Promover para bispo">♝<span>Bispo</span></button><button class="button button-ghost promotion-option" data-promotion="n" aria-label="Promover para cavalo">♞<span>Cavalo</span></button></div></div></div>
     <div id="confirm-dialog" class="dialog hidden" role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message"><div class="dialog-content"><p class="section-kicker">CONFIRME A AÇÃO</p><h2 id="confirm-title">Tem certeza?</h2><p id="confirm-message" class="dialog-lede"></p><div class="dialog-buttons"><button id="btn-confirm-action" class="button button-amber">Confirmar</button><button id="btn-cancel-action" class="button button-link">Cancelar</button></div></div></div>
     <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script><script src="/js/chess_board.js?v=6"></script><script src="/js/chess_game.js?v=5"></script><script src="/js/ui_handler.js?v=5"></script><script src="/js/multiplayer.js?v=5"></script><script src="/js/app_router.js?v=2"></script><script src="/js/visual_effects.js?v=2"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script><script src="/js/i18n.js?v=3"></script><script src="/js/chess_board.js?v=7"></script><script src="/js/chess_game.js?v=7"></script><script src="/js/ui_handler.js?v=7"></script><script src="/js/multiplayer.js?v=7"></script><script src="/js/app_router.js?v=4"></script><script src="/js/visual_effects.js?v=2"></script>
 </body>
 </html>

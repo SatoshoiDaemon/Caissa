@@ -22,13 +22,13 @@ Official repository: [github.com/SatoshoiDaemon/Caissa](https://github.com/Satos
 - Reconnection with a 60-second grace period and abandonment handling.
 - Draw offers, resignation, timeout, checkmate, stalemate, and final-state persistence.
 - Account profiles, recovery codes, statistics, and match history.
-- Responsive Portuguese interface with keyboard support, reduced-motion behavior, and a charcoal/amber mechanical control-panel visual language.
+- Responsive Portuguese and American English interface with keyboard support, reduced-motion behavior, and a charcoal/amber mechanical control-panel visual language.
 
 ## Screenshots
 
 ### Lobby
 
-The lobby is the operational entry point for local play, room creation, invite-code entry, and public room discovery.
+The landing page at `/home` explains the product and directs players into the arena. The lobby at `/lobby` is the operational entry point for local play, room creation, invite-code entry, and public room discovery.
 
 ![Caissa lobby](docs/screenshots/lobby.png)
 
@@ -106,7 +106,7 @@ src/
     └── static/          CSS, board, router, UI, realtime client
 ```
 
-The frontend is a progressively enhanced single-page shell. Explicit Flask entry routes make `/`, `/home`, `/login`, `/u/<username>`, and `/room/<room_code>` refreshable without catching API, static, or unknown paths.
+The frontend is a progressively enhanced single-page shell. Explicit Flask entry routes make `/`, `/home`, `/lobby`, `/login`, `/u/<username>`, `/room/<room_code>`, and `/games/<game_id>` refreshable without catching API, static, or unknown paths. The interface supports `pt-BR` and `en-US`, remembers the selected language in the browser, and defaults to Portuguese.
 
 ## API surface
 
@@ -115,6 +115,7 @@ The frontend is a progressively enhanced single-page shell. Explicit Flask entry
 ```text
 POST /api/v1/games
 GET  /api/v1/games/{game_id}
+GET  /api/v1/games/{game_id}/replay
 GET  /api/v1/games/{game_id}/pgn
 POST /api/v1/games/import
 POST /api/v1/games/{game_id}/reconnect

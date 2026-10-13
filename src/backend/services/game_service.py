@@ -247,6 +247,29 @@ class GameService:
     def get_pgn(self, game_id):
         return export_pgn(self._get_game(game_id))
 
+    def get_replay(self, game_id):
+        state = self.get_state(game_id)
+        if state["status"] not in FINAL_STATUSES:
+            raise ApiError("game is still in progress", 409)
+
+        document = self._get_game(game_id)
+        replay = ChessGame()
+        initial_fen = document.get("initial_fen")
+        if initial_fen:
+            replay.load_from_fen(initial_fen)
+
+        positions = [replay.get_board_state()]
+        for move in document.get("move_history", []):
+            if not replay.move(move["from"], move["to"], move.get("promotion")):
+                raise ApiError("stored game history is invalid", 500)
+            positions.append(replay.get_board_state())
+
+        return {
+            **state,
+            "initial_fen": initial_fen or ChessGame().to_fen(),
+            "positions": positions,
+        }
+
     def import_pgn(self, pgn):
         try:
             game, headers, result = import_pgn(pgn)

@@ -18,7 +18,7 @@ class MultiplayerHandler {
             this.isConnected = true;
             const reconnect = this.hasConnected;
             this.hasConnected = true;
-            this.setConnectionStatus(reconnect ? 'Reconectado' : 'Conectado', reconnect ? 'reconnected' : 'connected');
+            this.setConnectionStatus(window.caissaI18n.t(reconnect ? 'game.connection.reconnected' : 'game.connection.connected'), reconnect ? 'reconnected' : 'connected');
             if (reconnect) this.gameClient.notify('Conexão restaurada. Estado sincronizado.', 'success');
             if (this.roomCode && this.gameClient.gameId) {
                 if (this.isSpectator && this.spectatorToken) this.spectateRoom(this.roomCode, this.gameClient.gameId, this.spectatorToken);
@@ -29,7 +29,7 @@ class MultiplayerHandler {
         this.socket.on('disconnect', () => {
             this.isConnected = false;
             if (!this.manualDisconnect) {
-                this.setConnectionStatus('Conexão perdida', 'lost');
+                this.setConnectionStatus(window.caissaI18n.t('game.connection.lost'), 'lost');
                 this.gameClient.notify('Conexão perdida. Tentando reconectar…', 'error');
             }
             this.manualDisconnect = false;
@@ -37,12 +37,12 @@ class MultiplayerHandler {
 
         this.socket.on('connect_error', (error) => {
             const expired = /auth|unauthori|forbidden|session/i.test(error?.message || '');
-            this.setConnectionStatus(expired ? 'Sessão expirada' : 'Sem conexão', expired ? 'expired' : 'lost');
+            this.setConnectionStatus(window.caissaI18n.t(expired ? 'game.connection.expired' : 'game.connection.offline'), expired ? 'expired' : 'lost');
             this.gameClient.notify(expired ? 'Sua sessão expirou. Entre novamente.' : 'Não foi possível conectar ao servidor.', 'error');
         });
 
         this.socket.on('player_joined', (data) => {
-            this.gameClient.notify(`${data.player_name} entrou como ${data.player_color}.`, 'success');
+            this.gameClient.notify(window.caissaI18n.t('game.playerJoined', {name: data.player_name, color: data.player_color === 'white' ? (window.caissaI18n.current === 'en-US' ? 'White' : 'brancas') : (window.caissaI18n.current === 'en-US' ? 'Black' : 'pretas')}), 'success');
         });
 
         this.socket.on('move_made', (data) => {
@@ -51,7 +51,7 @@ class MultiplayerHandler {
 
         this.socket.on('draw_offered', () => {
             if (this.isSpectator) return;
-            this.gameClient.requestConfirmation('Oferta de empate', 'O oponente ofereceu empate. Aceitar encerra a partida.', 'Aceitar empate')
+            this.gameClient.requestConfirmation(window.caissaI18n.t('game.drawOfferTitle'), window.caissaI18n.t('game.drawOfferMessage'), window.caissaI18n.t('game.drawOfferAccept'))
                 .then((accepted) => { if (accepted) this.acceptDraw(); else this.declineDraw(); });
         });
 
@@ -68,7 +68,7 @@ class MultiplayerHandler {
             this.lastEndedVersion = version;
             this.gameClient.applyGameState(state);
             const winner = state.status === 'draw' || state.status === 'stalemate' ? 'draw' : state.winner;
-            this.gameClient.finish(winner, data.reason || state.status || 'Partida encerrada');
+            this.gameClient.finish(winner, this.translateReason(data.reason || state.status || 'Partida encerrada'));
         });
 
         this.socket.on('server_error', (data) => {
@@ -78,12 +78,14 @@ class MultiplayerHandler {
 
         this.socket.on('draw_declined', () => this.gameClient.notify('A oferta de empate foi recusada.', 'info'));
         this.socket.on('player_disconnected', (data) => {
-            this.gameClient.notify(`Jogador ${data.player_color} desconectado. Reconexão disponível por ${data.reconnect_grace_seconds}s.`, 'info');
-            if (data.player_color !== this.gameClient.playerColor) this.gameClient.setOpponentStatus(`Oponente desconectado · reconexão em até ${data.reconnect_grace_seconds}s`);
+            const color = data.player_color === 'white' ? (window.caissaI18n.current === 'en-US' ? 'White' : 'brancas') : (window.caissaI18n.current === 'en-US' ? 'Black' : 'pretas');
+            this.gameClient.notify(window.caissaI18n.t('game.playerDisconnected', {color, seconds: data.reconnect_grace_seconds}), 'info');
+            if (data.player_color !== this.gameClient.playerColor) this.gameClient.setOpponentStatus(window.caissaI18n.t('game.opponentDisconnected', {seconds: data.reconnect_grace_seconds}));
         });
         this.socket.on('player_reconnected', (data) => {
-            this.gameClient.notify(`Jogador ${data.player_color} reconectado.`, 'success');
-            if (data.player_color !== this.gameClient.playerColor) this.gameClient.setOpponentStatus('Oponente reconectado');
+            const color = data.player_color === 'white' ? (window.caissaI18n.current === 'en-US' ? 'White' : 'brancas') : (window.caissaI18n.current === 'en-US' ? 'Black' : 'pretas');
+            this.gameClient.notify(window.caissaI18n.t('game.playerReconnected', {color}), 'success');
+            if (data.player_color !== this.gameClient.playerColor) this.gameClient.setOpponentStatus(window.caissaI18n.t('game.opponentReconnected'));
         });
 
         this.socket.on('room_state', (data) => {
@@ -100,6 +102,11 @@ class MultiplayerHandler {
 
     setConnectionStatus(label, state) {
         window.uiHandler?.setConnectionStatus(label, state);
+    }
+
+    translateReason(reason) {
+        const names = {checkmate: 'replay.result.checkmate', stalemate: 'replay.result.stalemate', draw: 'replay.result.draw', resignation: 'replay.result.resignation', timeout: 'replay.result.timeout', abandonment: 'replay.result.abandonment', 'Partida encerrada': 'game.ended'};
+        return names[reason] ? window.caissaI18n.t(names[reason]) : window.caissaI18n.normalize(reason);
     }
 
     joinRoom(roomCode, gameId, playerToken) {

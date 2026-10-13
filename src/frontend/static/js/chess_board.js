@@ -30,7 +30,7 @@ class ChessBoard {
                 square.classList.add((row + col) % 2 === 0 ? 'light' : 'dark');
                 square.dataset.pos = pos;
                 square.tabIndex = pos === this.focusedSquare ? 0 : -1;
-                square.setAttribute('aria-label', `Casa ${pos}, vazia`);
+                square.setAttribute('aria-label', this.squareLabel(pos, null));
                 square.addEventListener('click', () => {
                     this.focusSquare(pos, false);
                     this.onSquareClickCallback?.(pos);
@@ -42,7 +42,14 @@ class ChessBoard {
             }
         }
         this.container.setAttribute('role', 'grid');
-        this.container.setAttribute('aria-label', 'Tabuleiro de xadrez');
+        this.container.setAttribute('aria-label', window.caissaI18n.current === 'en-US' ? 'Chessboard' : 'Tabuleiro de xadrez');
+        window.addEventListener('caissa:localechange', () => {
+            this.container.setAttribute('aria-label', window.caissaI18n.current === 'en-US' ? 'Chessboard' : 'Tabuleiro de xadrez');
+            this.squares.forEach((square) => {
+                const {row, col} = this.posToRowCol(square.dataset.pos);
+                this.setSquareLabel(square, this.previousBoardState?.[row]?.[col] || null);
+            });
+        });
     }
 
     rowColToPos(row, col) {
@@ -88,7 +95,7 @@ class ChessBoard {
 
         square.innerHTML = '';
         square.appendChild(pieceElement);
-        square.setAttribute('aria-label', `Casa ${pos}, ${piece.color === 'white' ? 'brancas' : 'pretas'}: ${this.getPieceName(piece.type)}`);
+        this.setSquareLabel(square, piece);
     }
 
     getPieceSymbol(type, color) {
@@ -115,12 +122,26 @@ class ChessBoard {
     clearPieces() {
         this.squares.forEach(square => {
             square.innerHTML = '';
-            square.setAttribute('aria-label', `Casa ${square.dataset.pos}, vazia`);
+            square.setAttribute('aria-label', this.squareLabel(square.dataset.pos, null));
         });
     }
 
     getPieceName(type) {
-        return ({p: 'peão', r: 'torre', n: 'cavalo', b: 'bispo', q: 'dama', k: 'rei'})[type] || 'peça';
+        const names = window.caissaI18n.current === 'en-US'
+            ? {p: 'pawn', r: 'rook', n: 'knight', b: 'bishop', q: 'queen', k: 'king'}
+            : {p: 'peão', r: 'torre', n: 'cavalo', b: 'bispo', q: 'dama', k: 'rei'};
+        return names[type] || (window.caissaI18n.current === 'en-US' ? 'piece' : 'peça');
+    }
+
+    squareLabel(pos, piece) {
+        if (window.caissaI18n.current === 'en-US') {
+            return piece ? `Square ${pos}, ${piece.color}: ${this.getPieceName(piece.type)}` : `Square ${pos}, empty`;
+        }
+        return piece ? `Casa ${pos}, ${piece.color === 'white' ? 'brancas' : 'pretas'}: ${this.getPieceName(piece.type)}` : `Casa ${pos}, vazia`;
+    }
+
+    setSquareLabel(square, piece) {
+        square.setAttribute('aria-label', this.squareLabel(square.dataset.pos, piece));
     }
 
     handleKeydown(event, pos) {

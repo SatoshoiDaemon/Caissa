@@ -94,7 +94,7 @@ class UIHandler {
 
         // Update game status periodically
         this.statusTimer = window.setInterval(() => this.updateGameStatus(), 1000);
-        this.loadPublicRooms();
+        window.addEventListener('caissa:localechange', () => this.updateGameStatus());
     }
 
     notify(message, kind = 'info') {
@@ -102,7 +102,7 @@ class UIHandler {
         if (!region) return;
         const toast = document.createElement('div');
         toast.className = `toast ${kind}`;
-        toast.textContent = message;
+        toast.textContent = window.caissaI18n.normalize(message);
         region.appendChild(toast);
         window.setTimeout(() => {
             toast.classList.add('toast-leaving');
@@ -116,7 +116,7 @@ class UIHandler {
             button.dataset.idleLabel = button.textContent;
             button.disabled = true;
             button.setAttribute('aria-busy', 'true');
-            button.textContent = busyLabel;
+            button.textContent = window.caissaI18n.normalize(busyLabel);
         } else {
             button.disabled = false;
             button.removeAttribute('aria-busy');
@@ -335,7 +335,7 @@ class UIHandler {
         this.renderPlayerProfile('black', this.game.gameState && this.game.gameState.black_profile);
 
         const statusText = this.game.getGameStatus();
-        const nextStatusText = this.game.isSpectator ? `Observando · ${statusText}` : statusText;
+        const nextStatusText = this.game.isSpectator ? window.caissaI18n.t('game.spectatingStatus', {status: statusText}) : statusText;
         const moveText = document.getElementById('move-text');
         if (moveText.textContent !== nextStatusText) moveText.textContent = nextStatusText;
         const moveCount = document.getElementById('move-count');
@@ -345,7 +345,7 @@ class UIHandler {
         // Update move history
         const historyDiv = document.getElementById('move-history');
         const moves = this.game.getMoveHistory();
-        const nextHistory = moves || 'Nenhum movimento ainda';
+        const nextHistory = moves || window.caissaI18n.t('game.emptyHistory');
         if (historyDiv.textContent !== nextHistory) historyDiv.textContent = nextHistory;
 
         // Update captured pieces
@@ -465,20 +465,20 @@ class UIHandler {
         const message = document.getElementById('game-end-message');
 
         if (winner === null || winner === 'draw') {
-            title.textContent = 'Jogo Empatado';
-            message.textContent = reason || 'O jogo terminou em empate.';
+            title.textContent = window.caissaI18n.t('game.drawTitle');
+            message.textContent = reason ? window.caissaI18n.normalize(reason) : window.caissaI18n.t('game.drawEnded');
         } else {
             const winnerName = winner === 'white' ? this.game.whitePlayer : this.game.blackPlayer;
-            title.textContent = `${winnerName} Venceu!`;
+            title.textContent = window.caissaI18n.t('game.wonTitle', {name: winnerName});
             
             if (!reason) {
                 if (this.game.gameState.is_checkmate) {
-                    reason = 'Xeque-mate';
+                    reason = window.caissaI18n.t('replay.result.checkmate');
                 } else if (this.game.gameState.is_stalemate) {
-                    reason = 'Afogamento';
+                    reason = window.caissaI18n.t('replay.result.stalemate');
                 }
             }
-            message.textContent = reason || '';
+            message.textContent = reason ? window.caissaI18n.normalize(reason) : '';
         }
 
         this.openDialog('game-end-dialog');
@@ -509,7 +509,7 @@ class UIHandler {
         this.setSpectatorMode(false);
         document.getElementById('opponent-status').classList.add('hidden');
         document.getElementById('btn-retry-connection').classList.add('hidden');
-        if (window.caissaRouter && window.caissaRouter.currentPath !== '/home') window.caissaRouter.go('/home');
+        if (window.caissaRouter && window.caissaRouter.currentPath !== '/lobby') window.caissaRouter.go('/lobby');
         else this.loadPublicRooms();
     }
 
@@ -584,7 +584,7 @@ class UIHandler {
         status.classList.toggle('is-offline', state !== 'connected' && state !== 'reconnected');
         retry.classList.toggle('hidden', !['lost', 'expired'].includes(state));
         retry.disabled = false;
-        retry.textContent = state === 'expired' ? 'Entrar novamente' : 'Tentar novamente';
+        retry.textContent = window.caissaI18n.t(state === 'expired' ? 'game.retryLogin' : 'game.retry');
     }
 
     setOpponentStatus(message) {
@@ -599,7 +599,7 @@ class UIHandler {
             this.showAccountDialog('login-dialog');
             return;
         }
-        this.setConnectionStatus('Reconectando…', 'reconnecting');
+        this.setConnectionStatus(window.caissaI18n.t('game.reconnecting'), 'reconnecting');
         this.game.multiplayer.retry();
     }
 
@@ -624,7 +624,7 @@ class UIHandler {
             this.publicRooms = (await response.json()).rooms || [];
             this.renderPublicRooms();
         } catch (_error) {
-            container.innerHTML = '<div class="empty-state error-state">Não foi possível carregar as salas.<br><button class="button button-ghost button-small" data-retry-rooms="true">Tentar novamente</button></div>';
+            container.innerHTML = `<div class="empty-state error-state">${window.caissaI18n.t('room.loadError')}<br><button class="button button-ghost button-small" data-retry-rooms="true">${window.caissaI18n.t('room.retry')}</button></div>`;
             container.querySelector('[data-retry-rooms]')?.addEventListener('click', () => this.loadPublicRooms());
         }
     }
@@ -637,15 +637,15 @@ class UIHandler {
             return statusMatch && modeMatch;
         });
         if (!rooms.length) {
-            container.innerHTML = '<p class="empty-state">Nenhuma sala corresponde a este filtro.<br><small>Experimente outra visão ou crie uma sala.</small></p>';
+            container.innerHTML = `<p class="empty-state">${window.caissaI18n.t('room.emptyFilter')}<br><small>${window.caissaI18n.t('room.emptyHint')}</small></p>`;
             return;
         }
         const formatRoomClock = (value) => typeof value === 'number' ? `${Math.floor(value / 60000).toString().padStart(2, '0')}:${Math.floor((value % 60000) / 1000).toString().padStart(2, '0')}` : '—:—';
         container.innerHTML = rooms.map((room) => `
-                <article class="room-card"><div><strong>${this.escapeHtml(room.name)}</strong><span>${this.escapeHtml(room.mode)}</span></div>
-                <p>${this.escapeHtml(room.white_player || 'Aguardando')} ${room.black_player ? `× ${this.escapeHtml(room.black_player)}` : '× aguardando oponente'}</p>
-                <small>${formatRoomClock(room.clock?.white_time_remaining_ms)} × ${formatRoomClock(room.clock?.black_time_remaining_ms)} · ${room.spectator_count} espectador(es) · ${this.escapeHtml(room.status)}</small>
-                <div class="room-card-actions"><button class="button button-amber button-small" data-room-join="${this.escapeHtml(room.room_code || '')}">Entrar</button><button class="button button-ghost button-small" data-room-spectate="${this.escapeHtml(room.room_code || '')}">Espectar</button></div></article>`).join('');
+                <article class="room-card"><div><strong>${this.escapeHtml(room.name)}</strong><span>${this.escapeHtml(this.roomModeLabel(room.mode))}</span></div>
+                <p>${this.escapeHtml(room.white_player || window.caissaI18n.t('room.waiting'))} ${room.black_player ? `× ${this.escapeHtml(room.black_player)}` : `× ${window.caissaI18n.t('room.waitingOpponent')}`}</p>
+                <small>${formatRoomClock(room.clock?.white_time_remaining_ms)} × ${formatRoomClock(room.clock?.black_time_remaining_ms)} · ${window.caissaI18n.t('room.spectators', {count: room.spectator_count || 0})} · ${this.escapeHtml(this.roomStatusLabel(room.status))}</small>
+                <div class="room-card-actions"><button class="button button-amber button-small" data-room-join="${this.escapeHtml(room.room_code || '')}">${window.caissaI18n.t('room.join')}</button><button class="button button-ghost button-small" data-room-spectate="${this.escapeHtml(room.room_code || '')}">${window.caissaI18n.t('room.watch')}</button></div></article>`).join('');
         container.querySelectorAll('[data-room-join]').forEach((button) => button.addEventListener('click', () => { document.getElementById('room-code').value = button.dataset.roomJoin; this.showJoinRoomDialog(); }));
         container.querySelectorAll('[data-room-spectate]').forEach((button) => button.addEventListener('click', () => this.startSpectating(button.dataset.roomSpectate)));
     }
@@ -653,6 +653,17 @@ class UIHandler {
     startSpectating(roomCode) {
         document.getElementById('spectate-room-code').value = roomCode;
         this.openDialog('spectate-room-dialog');
+    }
+
+    roomModeLabel(mode) {
+        const labels = {bullet: 'Bullet', blitz: 'Blitz', rapid: 'Rapid', classical: 'Classical'};
+        return labels[mode] || mode || '—';
+    }
+
+    roomStatusLabel(status) {
+        if (status === 'waiting') return window.caissaI18n.t('room.waiting');
+        if (status === 'active') return window.caissaI18n.current === 'en-US' ? 'In game' : 'Em jogo';
+        return status || '—';
     }
 
     async spectateRoom() {

@@ -61,6 +61,10 @@ def create_game_blueprint():
     def get_game(game_id):
         return jsonify(_service().get_state(validate_game_id(game_id)))
 
+    @blueprint.get("/<game_id>/replay")
+    def get_replay(game_id):
+        return jsonify(_service().get_replay(validate_game_id(game_id)))
+
     @blueprint.get("/<game_id>/pgn")
     def get_pgn(game_id):
         return current_app.response_class(

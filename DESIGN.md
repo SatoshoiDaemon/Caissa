@@ -12,7 +12,7 @@ Caissa is a real-time chess concourse: a precise live board where players, clock
 - Matte panels and hairline rules define structure. Depth comes from one soft shadow system, not decorative glass.
 - Fixed-cell grids, tabular numerals, uppercase metadata, and small state lamps make live changes legible.
 - The chessboard remains the visual anchor. Side rail content supports the board instead of competing with it.
-- Portuguese is the product language; technical system labels remain short and secondary.
+- Brazilian Portuguese is the default product language, with American English available; technical system labels remain short and secondary.
 
 ## Typography
 
@@ -39,7 +39,9 @@ board-dark  #9b6849
 
 ## Surfaces and flows
 
-- Lobby: a game-first opening with three direct actions and live public rooms.
+- Landing: a concise product explanation with a direct path into play.
+- Lobby: a game-first surface with three direct actions and live public rooms.
+- Game review: a read-only board with move-by-move navigation and result context.
 - Account dialogs: compact, focused tasks with strong labels and recovery copy.
 - Arena: board, player strips, clocks, state module, actions, and move history.
 - Spectator: same arena state with an explicit read-only banner and no mutation affordance.

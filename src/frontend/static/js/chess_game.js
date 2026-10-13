@@ -388,17 +388,23 @@ class ChessGameClient {
 
     getGameStatus() {
         if (this.gameState.is_checkmate) {
-            const winner = this.gameState.current_player === 'white' ? 'Black' : 'White';
-            return `XEQUE-MATE! ${winner} venceu!`;
+            const winner = this.gameState.current_player === 'white' ? 'black' : 'white';
+            const label = winner === 'white'
+                ? (window.caissaI18n.current === 'en-US' ? 'White' : 'Brancas')
+                : (window.caissaI18n.current === 'en-US' ? 'Black' : 'Pretas');
+            return window.caissaI18n.t('game.checkmateStatus', {winner: label});
         } else if (this.gameState.is_stalemate) {
-            return 'AFOGAMENTO! Jogo empatado.';
+            return window.caissaI18n.t('game.stalemateStatus');
         } else if (this.gameState.in_check) {
-            return `${this.gameState.current_player.toUpperCase()} em xeque!`;
+            const player = this.gameState.current_player === 'white'
+                ? (window.caissaI18n.current === 'en-US' ? 'White' : 'Brancas')
+                : (window.caissaI18n.current === 'en-US' ? 'Black' : 'Pretas');
+            return window.caissaI18n.t('game.checkStatus', {player});
         } else {
-            const currentPlayerName = this.gameState.current_player === 'white' 
-                ? this.whitePlayer 
+            const currentPlayerName = this.gameState.current_player === 'white'
+                ? this.whitePlayer
                 : this.blackPlayer;
-            return `Vez de ${currentPlayerName}`;
+            return window.caissaI18n.t('game.turnStatus', {player: currentPlayerName});
         }
     }
 

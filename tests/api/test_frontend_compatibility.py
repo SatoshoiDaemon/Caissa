@@ -6,7 +6,7 @@ FRONTEND_JS = PROJECT_ROOT / "src" / "frontend" / "static" / "js"
 
 
 def test_frontend_entry_points_are_refreshable(client):
-    for path in "/", "/home", "/login", "/u/demo", "/room/ABC12345":
+    for path in "/", "/home", "/lobby", "/login", "/u/demo", "/room/ABC12345", "/games/demo-game":
         response = client.get(path)
         assert response.status_code == 200
         assert b"<title>Caissa" in response.data
@@ -39,3 +39,13 @@ def test_frontend_uses_official_room_contracts():
     assert "increment_seconds" not in chess_game
     assert "white_time_remaining_ms" in ui_handler
     assert "/reconnect" in chess_game
+
+
+def test_frontend_contains_distinct_landing_lobby_and_replay_surfaces():
+    html = INDEX_HTML.read_text()
+    router = (FRONTEND_JS / "app_router.js").read_text()
+    assert 'id="landing-page"' in html
+    assert 'id="menu-principal"' in html
+    assert 'id="game-replay-page"' in html
+    assert "normalized === '/lobby'" in router
+    assert "showReplay(decodeURIComponent(gameMatch[1]))" in router

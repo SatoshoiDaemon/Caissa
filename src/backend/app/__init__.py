@@ -82,8 +82,10 @@ def create_app(
     # catching API, static, or otherwise unknown paths.
     app.add_url_rule("/", "frontend_root", frontend_entry)
     app.add_url_rule("/home", "frontend_home", frontend_entry)
+    app.add_url_rule("/lobby", "frontend_lobby", frontend_entry)
     app.add_url_rule("/login", "frontend_login", frontend_entry)
     app.add_url_rule("/u/<username>", "frontend_profile", frontend_entry)
     app.add_url_rule("/room/<room_code>", "frontend_room", frontend_entry)
+    app.add_url_rule("/games/<game_id>", "frontend_game_review", frontend_entry)
 
     return app

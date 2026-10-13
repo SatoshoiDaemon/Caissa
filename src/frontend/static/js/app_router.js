@@ -3,6 +3,9 @@ class CaissaRouter {
         this.ui = ui;
         this.currentPath = null;
         this.profileRequest = 0;
+        this.replayRequest = 0;
+        this.replayData = null;
+        this.replayBoard = null;
     }
 
     initialize() {
@@ -15,6 +18,12 @@ class CaissaRouter {
         window.addEventListener('popstate', () => this.resolve(window.location.pathname, false));
         this.bindAuthForms();
         this.bindProfileSurface();
+        this.bindReplaySurface();
+        window.addEventListener('caissa:localechange', () => {
+            if (this.currentPath === '/lobby') this.ui.renderPublicRooms();
+            const profile = this.currentPath?.match(/^\/u\/([^/]+)$/);
+            if (profile) this.showProfile(decodeURIComponent(profile[1]));
+        });
         const initialPath = window.location.pathname === '/' ? '/home' : window.location.pathname;
         if (window.location.pathname === '/') history.replaceState({}, '', initialPath);
         this.resolve(initialPath, true);
@@ -32,21 +41,39 @@ class CaissaRouter {
         const normalized = path.replace(/\/$/, '') || '/home';
         if (this.currentPath === normalized && !initial) return;
         this.currentPath = normalized;
+        document.querySelectorAll('.primary-nav [data-route]').forEach((link) => {
+            const current = normalized === link.dataset.route || (link.dataset.route === '/lobby' && normalized.startsWith('/room/'));
+            if (current) link.setAttribute('aria-current', 'page');
+            else link.removeAttribute('aria-current');
+        });
         const profileMatch = normalized.match(/^\/u\/([^/]+)$/);
         const roomMatch = normalized.match(/^\/room\/([^/]+)$/);
+        const gameMatch = normalized.match(/^\/games\/([^/]+)$/);
         if (normalized === '/login') return this.showLogin('login');
         if (normalized === '/home') return this.showHome();
+        if (normalized === '/lobby') return this.showLobby();
         if (profileMatch) return this.showProfile(decodeURIComponent(profileMatch[1]));
         if (roomMatch) return this.showRoom(decodeURIComponent(roomMatch[1]));
+        if (gameMatch) return this.showReplay(decodeURIComponent(gameMatch[1]));
         this.go('/home', true);
     }
 
     hideSurfaces() {
         this.ui.closeAllDialogs();
-        ['login-page', 'profile-page', 'menu-principal', 'game-container'].forEach((id) => document.getElementById(id)?.classList.add('hidden'));
+        ['landing-page', 'login-page', 'profile-page', 'menu-principal', 'game-container', 'game-replay-page'].forEach((id) => document.getElementById(id)?.classList.add('hidden'));
     }
 
     showHome() {
+        if (this.ui.game.gameId) {
+            this.ui.game.reset();
+            this.ui.currentRoomCode = null;
+            this.ui.isLocalMode = false;
+        }
+        this.hideSurfaces();
+        document.getElementById('landing-page').classList.remove('hidden');
+    }
+
+    showLobby() {
         if (this.ui.game.gameId) {
             this.ui.game.reset();
             this.ui.currentRoomCode = null;
@@ -75,8 +102,8 @@ class CaissaRouter {
         const requestId = ++this.profileRequest;
         const name = document.getElementById('profile-page-name');
         name.textContent = username;
-        document.getElementById('profile-stats').innerHTML = '<p class="empty-state">Carregando estatísticas…</p>';
-        document.getElementById('profile-games').innerHTML = '<p class="empty-state">Carregando histórico…</p>';
+        document.getElementById('profile-stats').innerHTML = `<p class="empty-state">${window.caissaI18n.t('loading.stats')}</p>`;
+        document.getElementById('profile-games').innerHTML = `<p class="empty-state">${window.caissaI18n.t('loading.history')}</p>`;
         try {
             const encoded = encodeURIComponent(username);
             const [profileResponse, statsResponse, gamesResponse] = await Promise.all([
@@ -84,7 +111,7 @@ class CaissaRouter {
                 fetch(`/api/v1/users/${encoded}/stats`),
                 fetch(`/api/v1/users/${encoded}/games`),
             ]);
-            if (!profileResponse.ok) throw new Error('Perfil não encontrado.');
+            if (!profileResponse.ok) throw new Error(window.caissaI18n.t('profile.missing'));
             const profile = (await profileResponse.json()).user;
             const stats = statsResponse.ok ? await statsResponse.json() : null;
             const games = gamesResponse.ok ? (await gamesResponse.json()).games || [] : [];
@@ -92,18 +119,18 @@ class CaissaRouter {
             this.renderProfile(profile, stats, games);
         } catch (error) {
             if (requestId !== this.profileRequest) return;
-            document.getElementById('profile-page-bio').textContent = error.message || 'Não foi possível carregar este perfil.';
-            document.getElementById('profile-stats').innerHTML = '<p class="empty-state error-state">Perfil indisponível.</p>';
+            document.getElementById('profile-page-bio').textContent = error.message || window.caissaI18n.t('profile.unavailable');
+            document.getElementById('profile-stats').innerHTML = `<p class="empty-state error-state">${window.caissaI18n.t('profile.unavailable')}</p>`;
             document.getElementById('profile-games').innerHTML = '';
         }
     }
 
     renderProfile(profile, stats, games) {
-        const username = profile.username || 'Jogador';
+        const username = profile.username || (window.caissaI18n.current === 'en-US' ? 'Player' : 'Jogador');
         const isOwn = this.ui.currentUser && this.ui.currentUser.username.toLowerCase() === username.toLowerCase();
         document.getElementById('profile-page-name').textContent = username;
         document.getElementById('profile-page-status').textContent = profile.status || '';
-        document.getElementById('profile-page-bio').textContent = profile.bio || 'Este jogador ainda não adicionou uma bio.';
+        document.getElementById('profile-page-bio').textContent = profile.bio || window.caissaI18n.t('profile.bioEmpty');
         const avatar = document.getElementById('profile-page-avatar');
         avatar.textContent = '';
         if (profile.profile_image_url) {
@@ -122,20 +149,20 @@ class CaissaRouter {
 
     renderStats(stats) {
         if (!stats) {
-            document.getElementById('profile-stats').innerHTML = '<p class="empty-state">Estatísticas indisponíveis.</p>';
+            document.getElementById('profile-stats').innerHTML = `<p class="empty-state">${window.caissaI18n.t('profile.noStats')}</p>`;
             return;
         }
         const overall = stats.overall || stats;
         const week = stats.week || {};
         const month = stats.month || {};
         const values = [
-            ['Partidas', overall.total ?? overall.total_games ?? 0],
-            ['Vitórias', overall.wins ?? 0],
-            ['Derrotas', overall.losses ?? 0],
-            ['Empates', overall.draws ?? 0],
-            ['Win rate', `${overall.win_rate ?? 0}%`],
-            ['Esta semana', week.total ?? 0],
-            ['Este mês', month.total ?? 0],
+            [window.caissaI18n.t('profile.stats.games'), overall.total ?? overall.total_games ?? 0],
+            [window.caissaI18n.t('profile.stats.wins'), overall.wins ?? 0],
+            [window.caissaI18n.t('profile.stats.losses'), overall.losses ?? 0],
+            [window.caissaI18n.t('profile.stats.draws'), overall.draws ?? 0],
+            [window.caissaI18n.t('profile.stats.winRate'), `${overall.win_rate ?? 0}%`],
+            [window.caissaI18n.t('profile.stats.week'), week.total ?? 0],
+            [window.caissaI18n.t('profile.stats.month'), month.total ?? 0],
         ];
         document.getElementById('profile-stats').innerHTML = values.map(([label, value]) => `<div class="stat-cell"><strong>${this.escape(value)}</strong><span>${label}</span></div>`).join('');
     }
@@ -143,10 +170,10 @@ class CaissaRouter {
     renderGames(games) {
         document.getElementById('profile-games-count').textContent = String(games.length);
         if (!games.length) {
-            document.getElementById('profile-games').innerHTML = '<p class="empty-state">Nenhuma partida concluída ainda.</p>';
+            document.getElementById('profile-games').innerHTML = `<p class="empty-state">${window.caissaI18n.t('profile.noGames')}</p>`;
             return;
         }
-        document.getElementById('profile-games').innerHTML = games.slice(0, 12).map((game) => `<div class="profile-game-row"><strong>Partida ${this.escape(game.game_id || '')}</strong><span>${this.escape(game.result || '—')} · ${this.escape(game.mode || 'partida')}</span><small>${this.escape(game.status || '')}</small></div>`).join('');
+        document.getElementById('profile-games').innerHTML = games.slice(0, 12).map((game) => `<a class="profile-game-row" href="/games/${encodeURIComponent(game.game_id || '')}" data-route="/games/${encodeURIComponent(game.game_id || '')}"><strong>${this.escape(window.caissaI18n.t('profile.game', {id: game.game_id || ''}))}</strong><span>${this.escape(this.translateResult(game.result))} · ${this.escape(this.translateMode(game.mode))}</span><small>${this.escape(this.translateResult(game.status))}</small></a>`).join('');
     }
 
     async showRoom(roomCode) {
@@ -202,7 +229,7 @@ class CaissaRouter {
             this.ui.updateGameStatus();
         } catch (error) {
             this.ui.notify(error.message || 'Não foi possível abrir esta sala.', 'error');
-            this.go('/home', true);
+            this.go('/lobby', true);
         }
     }
 
@@ -210,6 +237,111 @@ class CaissaRouter {
         this.hideSurfaces();
         document.getElementById('game-container').classList.remove('hidden');
         this.ui.updateGameStatus();
+    }
+
+    async showReplay(gameId) {
+        this.hideSurfaces();
+        document.getElementById('game-replay-page').classList.remove('hidden');
+        document.getElementById('replay-content').classList.add('hidden');
+        document.getElementById('replay-unavailable').classList.add('hidden');
+        document.getElementById('replay-message').textContent = window.caissaI18n.t('replay.loading');
+        const requestId = ++this.replayRequest;
+        try {
+            const response = await fetch(`/api/v1/games/${encodeURIComponent(gameId)}/replay`);
+            const data = await response.json();
+            if (requestId !== this.replayRequest) return;
+            if (response.status === 409) {
+                this.showReplayUnavailable(window.caissaI18n.t('replay.active'));
+                return;
+            }
+            if (response.status === 404) {
+                this.showReplayUnavailable(window.caissaI18n.t('replay.notFound'));
+                return;
+            }
+            if (!response.ok) throw new Error(data.error || window.caissaI18n.t('replay.failed'));
+            this.renderReplay(data);
+        } catch (error) {
+            if (requestId !== this.replayRequest) return;
+            this.showReplayUnavailable(error.message || window.caissaI18n.t('replay.failed'));
+        }
+    }
+
+    showReplayUnavailable(message) {
+        document.getElementById('replay-message').textContent = '';
+        document.getElementById('replay-unavailable-copy').textContent = message;
+        document.getElementById('replay-unavailable').classList.remove('hidden');
+    }
+
+    renderReplay(data) {
+        this.replayData = data;
+        document.getElementById('replay-message').textContent = data.move_history.length ? '' : window.caissaI18n.t('replay.empty');
+        document.getElementById('replay-content').classList.remove('hidden');
+        document.getElementById('replay-white-name').textContent = data.white_player || window.caissaI18n.t('replay.white');
+        document.getElementById('replay-black-name').textContent = data.black_player || window.caissaI18n.t('replay.black');
+        document.getElementById('replay-move-count').textContent = String(data.move_history.length);
+        document.getElementById('replay-result').textContent = this.replayResult(data);
+        const moves = document.getElementById('replay-move-list');
+        moves.innerHTML = data.move_history.map((move, index) => {
+            const number = Math.floor(index / 2) + 1;
+            const side = index % 2 === 0 ? 'white' : 'black';
+            const moveLabel = `${number}${side === 'black' ? '…' : '.'} ${move.san || `${move.from}–${move.to}`}`;
+            return `<li><button class="replay-move" type="button" data-replay-ply="${index + 1}" aria-label="${this.escape(moveLabel)}">${this.escape(moveLabel)}</button></li>`;
+        }).join('');
+        if (!this.replayBoard) {
+            this.replayBoard = new ChessBoard('replay-board');
+            this.replayBoard.initialize();
+        }
+        this.replayBoard.container.querySelectorAll('.square').forEach((square) => {
+            square.disabled = true;
+            square.tabIndex = -1;
+        });
+        this.renderReplayAt(0);
+    }
+
+    renderReplayAt(ply) {
+        if (!this.replayData) return;
+        const last = this.replayData.positions.length - 1;
+        this.replayPly = Math.max(0, Math.min(ply, last));
+        this.replayBoard.updateBoard(this.replayData.positions[this.replayPly]);
+        document.getElementById('replay-position').textContent = window.caissaI18n.t('replay.position', {current: this.replayPly, total: last});
+        document.querySelectorAll('[data-replay-ply]').forEach((button) => button.classList.toggle('is-active', Number(button.dataset.replayPly) === this.replayPly));
+        document.getElementById('replay-first').disabled = this.replayPly === 0;
+        document.getElementById('replay-previous').disabled = this.replayPly === 0;
+        document.getElementById('replay-next').disabled = this.replayPly === last;
+        document.getElementById('replay-last').disabled = this.replayPly === last;
+    }
+
+    bindReplaySurface() {
+        document.getElementById('replay-first').addEventListener('click', () => this.renderReplayAt(0));
+        document.getElementById('replay-previous').addEventListener('click', () => this.renderReplayAt(this.replayPly - 1));
+        document.getElementById('replay-next').addEventListener('click', () => this.renderReplayAt(this.replayPly + 1));
+        document.getElementById('replay-last').addEventListener('click', () => this.renderReplayAt(this.replayData?.positions.length - 1));
+        document.getElementById('replay-move-list').addEventListener('click', (event) => {
+            const button = event.target.closest('[data-replay-ply]');
+            if (button) this.renderReplayAt(Number(button.dataset.replayPly));
+        });
+        window.addEventListener('caissa:localechange', () => {
+            if (!this.replayData) return;
+            const ply = this.replayPly || 0;
+            this.renderReplay(this.replayData);
+            this.renderReplayAt(ply);
+        });
+    }
+
+    replayResult(data) {
+        if (data.winner === 'white') return window.caissaI18n.t('replay.result.whiteWon');
+        if (data.winner === 'black') return window.caissaI18n.t('replay.result.blackWon');
+        return this.translateResult(data.status);
+    }
+
+    translateResult(value) {
+        const key = `replay.result.${value}`;
+        return window.caissaI18n.t(key) === key ? (value || '—') : window.caissaI18n.t(key);
+    }
+
+    translateMode(value) {
+        const modes = {bullet: 'Bullet', blitz: 'Blitz', rapid: 'Rapid', classical: 'Classical', local: window.caissaI18n.current === 'en-US' ? 'Local' : 'Local', online: window.caissaI18n.current === 'en-US' ? 'Online' : 'Online', imported: window.caissaI18n.current === 'en-US' ? 'Imported' : 'Importada'};
+        return modes[value] || value || '—';
     }
 
     bindAuthForms() {
@@ -238,7 +370,7 @@ class CaissaRouter {
             this.ui.currentUser = (await response.json()).user;
             this.ui.renderAccount();
             this.ui.notify('Sessão iniciada.', 'success');
-            this.go('/home');
+            this.go('/lobby');
         } catch (error) { this.setError('page-login-password', error.message || 'Servidor indisponível.'); }
         finally { this.ui.setBusy(button, false); }
     }
@@ -301,7 +433,7 @@ class CaissaRouter {
     }
 
     bindProfileSurface() {
-        document.getElementById('btn-profile-back').addEventListener('click', () => this.go('/home'));
+        document.getElementById('btn-profile-back').addEventListener('click', () => this.go('/lobby'));
         document.getElementById('btn-profile-edit-page').addEventListener('click', () => this.ui.showProfileDialog());
         document.getElementById('btn-profile-change-password').addEventListener('click', () => {
             document.getElementById('profile-password-form').classList.remove('hidden');
@@ -327,7 +459,7 @@ class CaissaRouter {
         const field = document.getElementById(fieldId);
         const error = document.getElementById(`${fieldId}-error`);
         if (field) { field.setAttribute('aria-invalid', 'true'); field.focus(); }
-        if (error) error.textContent = message;
+        if (error) error.textContent = window.caissaI18n.normalize(message);
     }
 
     async changePassword() {
