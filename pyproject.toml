@@ -10,7 +10,7 @@ requires-python = ">=3.10"
 dependencies = [
   "Flask==2.3.3",
   "Werkzeug==2.3.7",
-  "Flask-CORS==4.0.0",
+  "Flask-CORS==6.0.5",
   "Flask-SocketIO==5.3.4",
   "python-socketio==5.9.0",
   "python-engineio==4.14.0",
