@@ -13,7 +13,7 @@ dependencies = [
   "Flask-CORS==4.0.0",
   "Flask-SocketIO==5.3.4",
   "python-socketio==5.9.0",
-  "python-engineio==4.7.1",
+  "python-engineio==4.14.0",
   "python-dotenv==1.0.0",
   "argon2-cffi>=23.1,<26",
   "pymongo>=4.6,<5",
