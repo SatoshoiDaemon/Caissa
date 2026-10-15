@@ -252,8 +252,20 @@ def test_completed_game_replay_returns_each_server_reconstructed_position(client
     ).get_json()
     game_url = f"/api/v1/games/{game['game_id']}"
     headers = {"Authorization": f"Bearer {game['player_token']}"}
-    assert client.post(f"{game_url}/moves", headers=headers, json={"from": "e2", "to": "e4"}).status_code == 200
-    assert client.post(f"{game_url}/moves", headers={"Authorization": f"Bearer {game['black_player_token']}"}, json={"from": "e7", "to": "e5"}).status_code == 200
+    assert (
+        client.post(
+            f"{game_url}/moves", headers=headers, json={"from": "e2", "to": "e4"}
+        ).status_code
+        == 200
+    )
+    assert (
+        client.post(
+            f"{game_url}/moves",
+            headers={"Authorization": f"Bearer {game['black_player_token']}"},
+            json={"from": "e7", "to": "e5"},
+        ).status_code
+        == 200
+    )
     assert client.post(f"{game_url}/resign", headers=headers).status_code == 200
 
     response = client.get(f"{game_url}/replay")
@@ -272,7 +284,9 @@ def test_replay_accepts_imported_games_with_a_custom_initial_fen(client):
     initial_fen = "4k3/8/8/8/8/8/4K3/8 w - - 0 1"
     imported = client.post(
         "/api/v1/games/import",
-        json={"pgn": f'[SetUp "1"]\n[FEN "{initial_fen}"]\n[White "Alice"]\n[Black "Bob"]\n\n1. Kd2 *'},
+        json={
+            "pgn": f'[SetUp "1"]\n[FEN "{initial_fen}"]\n[White "Alice"]\n[Black "Bob"]\n\n1. Kd2 *'
+        },
     ).get_json()
 
     response = client.get(f"/api/v1/games/{imported['game_id']}/replay")
@@ -290,4 +304,6 @@ def test_replay_rejects_active_and_missing_games(client):
     replay_url = f"/api/v1/games/{game['game_id']}/replay"
 
     assert client.get(replay_url).status_code == 409
-    assert client.get("/api/v1/games/00000000-0000-4000-8000-000000000000/replay").status_code == 404
+    assert (
+        client.get("/api/v1/games/00000000-0000-4000-8000-000000000000/replay").status_code == 404
+    )
